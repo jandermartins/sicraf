@@ -22,15 +22,17 @@ public interface MotoristaRepository extends JpaRepository<Motorista, Long> {
     boolean existsByCnh(String cnh);
 
     @Query("""
-        SELECT m FROM Motorista m
-        WHERE (:status IS NULL OR m.status = :status)
-          AND (:secretaria IS NULL OR LOWER(m.secretaria) LIKE LOWER(CONCAT('%', :secretaria, '%')))
-          AND (:nome IS NULL OR LOWER(m.nome) LIKE LOWER(CONCAT('%', :nome, '%')))
-    """)
-    Page<Motorista> findByFilters(@Param("status") String status,
-                                  @Param("secretaria") String secretaria,
-                                  @Param("nome") String nome,
-                                  Pageable pageable);
+    SELECT m FROM Motorista m
+    WHERE (m.status = :status OR :status IS NULL)
+      AND LOWER(m.secretaria) LIKE LOWER(CONCAT('%', COALESCE(:secretaria, ''), '%'))
+      AND LOWER(m.nome) LIKE LOWER(CONCAT('%', COALESCE(:nome, ''), '%'))
+""")
+    Page<Motorista> findByFilters(
+            @Param("status") String status,
+            @Param("secretaria") String secretaria,
+            @Param("nome") String nome,
+            Pageable pageable
+    );
 
     /**
      * RF010 - Busca motoristas com CNH vencendo nos próximos N dias.

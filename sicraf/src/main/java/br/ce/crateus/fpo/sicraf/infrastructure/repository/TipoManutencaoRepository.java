@@ -17,11 +17,12 @@ public interface TipoManutencaoRepository extends JpaRepository<TipoManutencao, 
     boolean existsByNome(String nome);
 
     @Query("""
-        SELECT t FROM TipoManutencao t
-        WHERE (:status IS NULL OR t.status = :status)
-          AND (:tipo IS NULL OR t.tipo = :tipo)
-          AND (:nome IS NULL OR LOWER(t.nome) LIKE LOWER(CONCAT('%', :nome, '%')))
-    """)
+    SELECT t FROM TipoManutencao t
+    WHERE (t.status = :status OR :status IS NULL)
+      AND (t.tipo = :tipo OR :tipo IS NULL)
+      AND LOWER(t.nome) LIKE LOWER(CONCAT('%', COALESCE(:nome, ''), '%'))
+    ORDER BY t.nome ASC
+""")
     Page<TipoManutencao> findByFilters(@Param("status") String status,
                                        @Param("tipo") String tipo,
                                        @Param("nome") String nome,

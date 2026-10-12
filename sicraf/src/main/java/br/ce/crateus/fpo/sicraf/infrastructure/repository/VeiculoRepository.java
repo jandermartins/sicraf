@@ -16,10 +16,10 @@ public interface VeiculoRepository extends JpaRepository<Veiculo, Long> {
     boolean existsByPlaca(String placa);
 
     @Query("""
-        SELECT v FROM Veiculo v
-        WHERE (:status IS NULL OR v.status = :status)
-          AND (:marca IS NULL OR LOWER(v.marca) LIKE LOWER(CONCAT('%', :marca, '%')))
-    """)
+    SELECT v FROM Veiculo v
+    WHERE (v.status = :status OR :status IS NULL)
+      AND (LOWER(v.marca) LIKE LOWER(CONCAT('%', :marca, '%')) OR :marca IS NULL)
+""")
     Page<Veiculo> findByFilters(@Param("status") String status,
                                 @Param("marca") String marca,
                                 Pageable pageable);
