@@ -1,7 +1,7 @@
 app = "sicraf-api"  # ajuste para o nome que você escolher
 
 [build]
-builder = "dockerfile"
+dockerfile = "Dockerfile"
 
 [env]
 PORT = "8080"
