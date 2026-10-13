@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/alertas-manutencao/**").hasAnyRole("GESTOR", "COORDENADOR", "MECANICO")
                         .requestMatchers("/api/historico/**").hasAnyRole("GESTOR", "COORDENADOR")
                         .requestMatchers("/api/dashboard/**").hasAnyRole("GESTOR", "COORDENADOR")
+                        .requestMatchers("/api/relatorios/**").hasAnyRole("GESTOR", "COORDENADOR")
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
