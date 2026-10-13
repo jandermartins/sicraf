@@ -1,19 +1,26 @@
-app = "sicraf-api"  # ajuste para o nome que você escolher
+# fly.toml app configuration file generated for sicraf on 2026-10-13T00:38:31Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'sicraf'
+primary_region = 'iad'
 
 [build]
-builder = "dockerfile"
+  builder = 'dockerfile'
 
 [env]
-PORT = "8080"
+  PORT = '8080'
 
 [http_service]
-internal_port = 8080
-force_https = true
-auto_stop_machines = "stop"
-auto_start_machines = true
-min_machines_running = 0
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
 
 [[vm]]
-memory = "512mb"
-cpu_kind = "shared"
-cpus = 1
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512
