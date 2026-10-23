@@ -1,5 +1,6 @@
 package br.ce.crateus.fpo.sicraf.application.resource;
 
+import br.ce.crateus.fpo.sicraf.domain.dto.request.AtualizarItensRequest;
 import br.ce.crateus.fpo.sicraf.domain.dto.request.ChecklistRequest;
 import br.ce.crateus.fpo.sicraf.domain.dto.response.ChecklistResponse;
 import br.ce.crateus.fpo.sicraf.domain.service.ChecklistService;
@@ -100,5 +101,12 @@ public class ChecklistController {
     public ResponseEntity<Void> remover(@PathVariable Long id) {
         service.remover(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/itens")
+    public ResponseEntity<ChecklistResponse> atualizarItens(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarItensRequest request) {
+        return ResponseEntity.ok(service.atualizarItens(id, request));
     }
 }

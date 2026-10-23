@@ -22,15 +22,19 @@ public class ChecklistRequest {
     private String observacoes;
 
     /**
-     * Lista de itens verificados. Se não enviada, todos os itens padrão
-     * são criados como NÃO verificados.
+     * Lista de itens do check-list. Se não enviada, o backend usa os itens padrão.
      */
     private List<ItemRequest> itens;
 
     @Data
     public static class ItemRequest {
+        /** Nome do item (ex: "Nível de Óleo", "CRLV do veículo"). */
         private String item;
+
+        /** Se o item foi verificado ou não. */
         private boolean verificado;
+
+        /** Observação opcional sobre o item. */
         private String observacao;
     }
 }

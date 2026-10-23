@@ -1,5 +1,6 @@
 package br.ce.crateus.fpo.sicraf.domain.service;
 
+import br.ce.crateus.fpo.sicraf.domain.dto.request.AtualizarItensRequest;
 import br.ce.crateus.fpo.sicraf.domain.dto.request.ChecklistRequest;
 import br.ce.crateus.fpo.sicraf.domain.dto.response.ChecklistResponse;
 import br.ce.crateus.fpo.sicraf.domain.exception.BusinessException;
@@ -17,12 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,29 +28,6 @@ public class ChecklistService {
     private final ChecklistRepository repository;
     private final VeiculoRepository veiculoRepository;
     private final MotoristaRepository motoristaRepository;
-
-    public Page<ChecklistResponse> listar(String status, Long veiculoId, Long motoristaId, Pageable pageable) {
-        return repository.findByFilters(status, veiculoId, motoristaId, pageable)
-                .map(this::toResponse);
-    }
-
-    public ChecklistResponse buscarPorId(Long id) {
-        Checklist checklist = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Check-list não encontrado: id=" + id));
-        return toResponse(checklist);
-    }
-
-    public List<ChecklistResponse> listarPorVeiculo(Long veiculoId) {
-        return repository.findByVeiculoIdOrderByDataSaidaDesc(veiculoId).stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    public List<ChecklistResponse> listarPorMotorista(Long motoristaId) {
-        return repository.findByMotoristaIdOrderByDataSaidaDesc(motoristaId).stream()
-                .map(this::toResponse)
-                .toList();
-    }
 
     @Transactional
     public ChecklistResponse criar(ChecklistRequest request) {
@@ -110,25 +84,33 @@ public class ChecklistService {
                 .status("EM_ANDAMENTO")
                 .build();
 
-        // Se o request não trouxe itens, cria todos os itens padrão como NÃO verificados
-        Map<String, ChecklistRequest.ItemRequest> itensEnviados = request.getItens() == null
-                ? Map.of()
-                : request.getItens().stream()
-                .collect(Collectors.toMap(
-                        ChecklistRequest.ItemRequest::getItem,
-                        Function.identity(),
-                        (a, b) -> a));
+        // ============================================
+        // Itens: se o request trouxe itens, usa eles.
+        // Caso contrário, usa os itens padrão.
+        // ============================================
+        if (request.getItens() != null && !request.getItens().isEmpty()) {
+            for (ChecklistRequest.ItemRequest itemReq : request.getItens()) {
+                if (itemReq.getItem() == null || itemReq.getItem().isBlank()) {
+                    continue; // ignora itens sem nome
+                }
 
-        for (String nomeItem : ChecklistItem.ITENS_PADRAO) {
-            ChecklistRequest.ItemRequest enviado = itensEnviados.get(nomeItem);
+                ChecklistItem item = ChecklistItem.builder()
+                        .item(itemReq.getItem().trim())
+                        .verificado(itemReq.isVerificado())
+                        .observacao(itemReq.getObservacao())
+                        .build();
 
-            ChecklistItem item = ChecklistItem.builder()
-                    .item(nomeItem)
-                    .verificado(enviado != null && enviado.isVerificado())
-                    .observacao(enviado != null ? enviado.getObservacao() : null)
-                    .build();
-
-            checklist.adicionarItem(item);
+                checklist.adicionarItem(item);
+            }
+        } else {
+            // Fallback: cria os itens padrão, todos não verificados
+            for (String nomeItem : ChecklistItem.ITENS_PADRAO) {
+                ChecklistItem item = ChecklistItem.builder()
+                        .item(nomeItem)
+                        .verificado(false)
+                        .build();
+                checklist.adicionarItem(item);
+            }
         }
 
         // Se todos os itens já vierem verificados, conclui automaticamente
@@ -147,6 +129,29 @@ public class ChecklistService {
         }
 
         return toResponse(salvo);
+    }
+
+    public Page<ChecklistResponse> listar(String status, Long veiculoId, Long motoristaId, Pageable pageable) {
+        return repository.findByFilters(status, veiculoId, motoristaId, pageable)
+                .map(this::toResponse);
+    }
+
+    public ChecklistResponse buscarPorId(Long id) {
+        Checklist checklist = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Check-list não encontrado: id=" + id));
+        return toResponse(checklist);
+    }
+
+    public List<ChecklistResponse> listarPorVeiculo(Long veiculoId) {
+        return repository.findByVeiculoIdOrderByDataSaidaDesc(veiculoId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public List<ChecklistResponse> listarPorMotorista(Long motoristaId) {
+        return repository.findByMotoristaIdOrderByDataSaidaDesc(motoristaId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -221,5 +226,47 @@ public class ChecklistService {
         }).toList());
 
         return r;
+    }
+
+    @Transactional
+    public ChecklistResponse atualizarItens(Long id, AtualizarItensRequest request) {
+        Checklist checklist = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Check-list não encontrado: id=" + id));
+
+        if (!"EM_ANDAMENTO".equalsIgnoreCase(checklist.getStatus())) {
+            throw new BusinessException(
+                    "Só é possível atualizar itens de check-lists EM_ANDAMENTO (atual: "
+                            + checklist.getStatus() + ")");
+        }
+
+        if (request.getItens() == null || request.getItens().isEmpty()) {
+            throw new BusinessException("Nenhum item foi informado para atualização");
+        }
+
+        var itensExistentes = checklist.getItens().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ChecklistItem::getItem,
+                        item -> item,
+                        (a, b) -> a));
+
+        for (AtualizarItensRequest.ItemUpdate update : request.getItens()) {
+            ChecklistItem item = itensExistentes.get(update.getItem());
+
+            if (item == null) {
+                throw new BusinessException(
+                        "Item não encontrado no check-list: " + update.getItem());
+            }
+
+            item.setVerificado(update.isVerificado());
+            if (update.getObservacao() != null) {
+                item.setObservacao(update.getObservacao());
+            }
+        }
+
+        if (checklist.isTodosItensVerificados()) {
+            checklist.setStatus("CONCLUIDO");
+        }
+
+        return toResponse(repository.save(checklist));
     }
 }

@@ -3,6 +3,7 @@ package br.ce.crateus.fpo.sicraf.infrastructure.repository;
 import br.ce.crateus.fpo.sicraf.domain.model.Checklist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +19,7 @@ public interface ChecklistRepository extends JpaRepository<Checklist, Long> {
           AND (:motoristaId IS NULL OR c.motorista.id = :motoristaId)
         ORDER BY c.dataSaida DESC
     """)
+    @EntityGraph(attributePaths = {"itens", "veiculo", "motorista"})
     Page<Checklist> findByFilters(@Param("status") String status,
                                   @Param("veiculoId") Long veiculoId,
                                   @Param("motoristaId") Long motoristaId,
